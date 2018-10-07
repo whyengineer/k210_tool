@@ -126,14 +126,13 @@ def chunks(l, n):
 
 class MAIXLoader:
     def change_baudrate(self, baudrate):
-        self._port = serial.Serial(
-            port=port,
-            baudrate=baudrate,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            bytesize=serial.EIGHTBITS,
-            timeout=3
-        )
+        print('[INFO] Change baudrate to ', baudrate)
+        out = struct.pack('III', 0, 4, baudrate)
+        crc32_checksum = struct.pack('I', binascii.crc32(out) & 0xFFFFFFFF)
+        out = struct.pack('HH', 0xd6, 0x00) + crc32_checksum + out
+        self.write(out)
+        time.sleep(0.05)
+        self._port.baudrate = baudrate
 
     def __init__(self, port='/dev/ttyUSB1', baudrate=115200):
         # configure the serial connections (the parameters differs on the device you are connecting to)
@@ -410,7 +409,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    loader = MAIXLoader(port=args.device, baudrate=args.baudrate)
+    # loader = MAIXLoader(port=args.device, baudrate=args.baudrate)
+    loader = MAIXLoader(port=args.device, baudrate=115200)
 
     # 1. Greeting.
     loader.reset_to_isp()
@@ -438,6 +438,8 @@ if __name__ == '__main__':
     time.sleep(2)
 
     loader.flash_greeting()
+
+    loader.change_baudrate(args.baudrate)
 
     loader.init_flash(args.chip)
 
